@@ -1,5 +1,6 @@
 #pragma once
+#include<filesystem>
 
 namespace Git{
-	inline constexpr const char * MAIN_DIR=".git";
+	inline const std::filesystem::path MAIN_DIR=".git";
 }
