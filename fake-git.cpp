@@ -1,5 +1,6 @@
 #include<iostream>
-#include "commands.h"
+#include "commands.hpp"
+#include"sha.hpp"
 
 int main(int argc,char **argv){
 	if(argc < 2){
