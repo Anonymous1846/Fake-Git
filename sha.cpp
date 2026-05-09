@@ -25,4 +25,18 @@ std::uint32_t f3(std::uint32_t b,std::uint32_t c,std::uint32_t d){
 std::uint32_t f4(std::uint32_t b,std::uint32_t c,std::uint32_t d){
    return b ^ c ^ d;
 }
-
+void pad(std::vector<uint8_t>& data){
+    uint64_t orginalSize = data.size() * 8;
+    data.push_back(0x80);
+    while((data.size() % 64) != 56){
+        data.push_back(0x00);
+    }
+    data.push_back((orginalSize >> 56) & 0xFF);
+    data.push_back((orginalSize >> 48) & 0xFF);
+    data.push_back((orginalSize >> 40) & 0xFF);
+    data.push_back((orginalSize >> 32) & 0xFF);
+    data.push_back((orginalSize >> 24) & 0xFF);
+    data.push_back((orginalSize >> 16) & 0xFF);
+    data.push_back((orginalSize >> 8) & 0xFF);
+    data.push_back((orginalSize >> 0) & 0xFF);
+}
