@@ -72,6 +72,6 @@ std::string hash_object(std::filesystem::path& path){
 	std::vector<uint8_t> finalBuffer(totalSize);
 	std::memcpy(finalBuffer.data(),header.data(),header.size());
 	finalBuffer[header.size()] = '\0';
-	std::memcpy(finalBuffer.data()+header.size()+1,finalBuffer.data(),size);
+	std::memcpy(finalBuffer.data()+header.size()+1,buffer.data(),size);
 	return to_hex(sha1(finalBuffer));
 }
