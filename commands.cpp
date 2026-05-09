@@ -1,5 +1,5 @@
-#include "commands.h"
-#include "constants.h"
+#include "commands.hpp"
+#include "constants.hpp"
 #include<filesystem>
 #include<fstream>
 #include<iostream>
@@ -19,7 +19,7 @@ int init(){
 		if(!write_contents(headFile,"ref: refs/heads/master\n"))return 1;
 		std::ofstream configFile(Git::MAIN_DIR / "config");
 		if(!configFile) return 1;
-		std::string configData = "[core]\n\trepositoryformatversion = 0\n\tfilemode - true\n\tbare = false\n";
+		std::string configData = "[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = false\n";
 		if(!write_contents(configFile, configData)) return 1;
 		return 0;
 }
