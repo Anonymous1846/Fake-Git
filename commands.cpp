@@ -19,13 +19,13 @@ std::vector<uint8_t> read_bytes(const std::filesystem::path &);
 std::vector<uint8_t> wrap(const std::string &, const std::vector<uint8_t> &);
 int init()
 {
-	if (!create_init_directory(Git::MAIN_DIR / "objects" / "pack"))
+	if (!create_init_directory(Git::OBJECTS / "pack"))
 		return 1;
-	if (!create_init_directory(Git::MAIN_DIR / "objects" / "info"))
+	if (!create_init_directory(Git::OBJECTS / "info"))
 		return 1;
-	if (!create_init_directory(Git::MAIN_DIR / "refs" / "heads"))
+	if (!create_init_directory(Git::REFS / "heads"))
 		return 1;
-	if (!create_init_directory(Git::MAIN_DIR / "refs" / "tags"))
+	if (!create_init_directory(Git::REFS / "tags"))
 		return 1;
 	std::ofstream headFile(Git::MAIN_DIR / "HEAD");
 	if (!headFile)
@@ -72,7 +72,7 @@ int hash_object_write(const std::string& type,const std::filesystem::path& fileP
 std::string cat_file(std::string& hex_data){
 	std::string_view dirName(hex_data.data(),2);
 	std::string_view fileName(hex_data.data()+2,hex_data.size()-2);
-	std::filesystem::path fullFilePath = Git::MAIN_DIR / "objects" / dirName / fileName;
+	std::filesystem::path fullFilePath = Git::OBJECTS / dirName / fileName;
 	if(fullFilePath.empty()) return NULL;
 	
 }
