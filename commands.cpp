@@ -69,7 +69,15 @@ int hash_object_write(const std::string& type,const std::filesystem::path& fileP
 	return 0;
 }
 
-int write_object(const std::string &sha_hex,const std::vector<uint8_t> &wrappedData)
+std::string cat_file(std::string& hex_data){
+	std::string_view dirName(hex_data.data(),2);
+	std::string_view fileName(hex_data.data()+2,hex_data.size()-2);
+	std::filesystem::path fullFilePath = Git::MAIN_DIR / "objects" / dirName / fileName;
+	if(fullFilePath.empty()) return NULL;
+	
+}
+
+int write_object(const std::string& sha_hex,const std::vector<uint8_t> &wrappedData)
 {
 
 	uLongf compressedSize = compressBound(wrappedData.size());
