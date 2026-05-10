@@ -15,8 +15,8 @@ bool write_contents(std::ofstream &, const std::string &);
 std::string hash_object(const std::string &type, const std::filesystem::path &path);
 int write_object(const std::string &sha_hex,const std::vector<uint8_t> &wrappedData);
 int hash_object_write(const std::string& type, const std::filesystem::path& path);
-
-
+std::vector<uint8_t> read_bytes(const std::filesystem::path &);
+std::vector<uint8_t> wrap(const std::string &, const std::vector<uint8_t> &);
 int init()
 {
 	if (!create_init_directory(Git::MAIN_DIR / "objects" / "pack"))
@@ -60,8 +60,13 @@ bool write_contents(std::ofstream &fileRef, const std::string &content)
 	return true;
 }
 
-int hash_object_write(){
-	
+int hash_object_write(const std::string& type,const std::filesystem::path& filePath){
+	std::vector<uint8_t> content = read_bytes(filePath);
+	std::vector<uint8_t> wrappedData = wrap(type,content);
+	std::string hexData = to_hex(sha1(wrappedData));
+	if(write_object(hexData,wrappedData)!=0) return 1;
+	std::cout<< hexData;
+	return 0;
 }
 
 int write_object(const std::string &sha_hex,const std::vector<uint8_t> &wrappedData)
