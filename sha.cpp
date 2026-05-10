@@ -1,12 +1,58 @@
 #include <cstdio>
 #include "sha.hpp"
 
+namespace
+{
+    std::uint32_t rotl(uint32_t x, int n)
+    {
+        return (x << n | (x >> (32 - n)));
+    }
+
+    std::uint32_t f1(std::uint32_t b, std::uint32_t c, std::uint32_t d)
+    {
+        return (b & c) | (~b & d);
+    }
+    std::uint32_t f2(std::uint32_t b, std::uint32_t c, std::uint32_t d)
+    {
+        return b ^ c ^ d;
+    }
+    std::uint32_t f3(std::uint32_t b, std::uint32_t c, std::uint32_t d)
+    {
+        return (b & c) | (c & d) | (b & d);
+    }
+    std::uint32_t f4(std::uint32_t b, std::uint32_t c, std::uint32_t d)
+    {
+        return b ^ c ^ d;
+    }
+    void pad(std::vector<uint8_t> &data)
+    {
+        uint64_t originalSize = data.size() * 8;
+
+        size_t padded = data.size() + 1;
+        padded += (56 - padded % 64 + 64) % 64;
+        padded += 8;
+        data.reserve(padded);
+        data.push_back(0x80);
+        while ((data.size() % 64) != 56)
+        {
+            data.push_back(0x00);
+        }
+        data.push_back((originalSize >> 56) & 0xFF);
+        data.push_back((originalSize >> 48) & 0xFF);
+        data.push_back((originalSize >> 40) & 0xFF);
+        data.push_back((originalSize >> 32) & 0xFF);
+        data.push_back((originalSize >> 24) & 0xFF);
+        data.push_back((originalSize >> 16) & 0xFF);
+        data.push_back((originalSize >> 8) & 0xFF);
+        data.push_back((originalSize >> 0) & 0xFF);
+    }
+}
 std::string to_hex(const std::array<uint8_t, 20> &hash)
 {
     char buf[41];
     for (int i = 0; i < 20; i++)
     {
-        sprintf(buf + i * 2, "%02x", hash[i]);
+        snprintf(buf + i * 2, 3,"%02x", hash[i]);
     }
     return std::string(buf, 40);
 }
@@ -108,43 +154,4 @@ std::array<uint8_t, 20> sha1(const std::vector<uint8_t> &data)
     result[18] = (h4 >> 8) & 0xFF;
     result[19] = (h4 >> 0) & 0xFF;
     return result;
-}
-
-std::uint32_t rotl(uint32_t x, int n)
-{
-    return (x << n | (x >> (32 - n)));
-}
-
-std::uint32_t f1(std::uint32_t b, std::uint32_t c, std::uint32_t d)
-{
-    return (b & c) | (~b & d);
-}
-std::uint32_t f2(std::uint32_t b, std::uint32_t c, std::uint32_t d)
-{
-    return b ^ c ^ d;
-}
-std::uint32_t f3(std::uint32_t b, std::uint32_t c, std::uint32_t d)
-{
-    return (b & c) | (c & d) | (b & d);
-}
-std::uint32_t f4(std::uint32_t b, std::uint32_t c, std::uint32_t d)
-{
-    return b ^ c ^ d;
-}
-void pad(std::vector<uint8_t> &data)
-{
-    uint64_t orginalSize = data.size() * 8;
-    data.push_back(0x80);
-    while ((data.size() % 64) != 56)
-    {
-        data.push_back(0x00);
-    }
-    data.push_back((orginalSize >> 56) & 0xFF);
-    data.push_back((orginalSize >> 48) & 0xFF);
-    data.push_back((orginalSize >> 40) & 0xFF);
-    data.push_back((orginalSize >> 32) & 0xFF);
-    data.push_back((orginalSize >> 24) & 0xFF);
-    data.push_back((orginalSize >> 16) & 0xFF);
-    data.push_back((orginalSize >> 8) & 0xFF);
-    data.push_back((orginalSize >> 0) & 0xFF);
 }
