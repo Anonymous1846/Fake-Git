@@ -2,14 +2,19 @@
 #include "constants.hpp"
 #include "sha.hpp"
 #include <filesystem>
-#include<vector>
+#include <vector>
 #include <fstream>
 #include <iostream>
 #include <cstring>
+#include <zlib.h>
+#include <string>
+#include <string_view>
 
 bool create_init_directory(const std::filesystem::path &);
 bool write_contents(std::ofstream &, const std::string &);
-std::string hash_object(const std::filesystem::path& path);
+std::string hash_object(const std::string &type, const std::filesystem::path &path);
+int write_object(const std::string &sha_hex,const std::vector<uint8_t> &wrappedData);
+int hash_object_write(const std::string& type, const std::filesystem::path& path);
 
 
 int init()
@@ -55,23 +60,68 @@ bool write_contents(std::ofstream &fileRef, const std::string &content)
 	return true;
 }
 
-std::string hash_object(std::filesystem::path& path){
-	std::ifstream fileInputStream(path,std::ios::binary | std::ios::ate);
-	std::streamsize size = fileInputStream.tellg();
-	fileInputStream.seekg(0,std::ios::beg);
-	std::vector<uint8_t> buffer(size);
+int hash_object_write(){
+	
+}
 
-	if(size > 0){
-		// if(!fileInputStream.read(buffer.data(),size)){
-		// 	return {};
-		// }
-		fileInputStream.read(reinterpret_cast<char*>(buffer.data()),size);
-	}
-	std::string header = "blob " + std::to_string(size);
+int write_object(const std::string &sha_hex,const std::vector<uint8_t> &wrappedData)
+{
+
+	uLongf compressedSize = compressBound(wrappedData.size());
+	std::vector<uint8_t> compress(compressedSize);
+
+	int RESULT_STAT = compress2(
+		compress.data(), &compressedSize,
+		wrappedData.data(), wrappedData.size(),
+		Z_DEFAULT_COMPRESSION);
+
+	if (RESULT_STAT != Z_OK) return 1;
+	std::string_view subDirName(sha_hex.data(),2);
+	std::string_view fileData(sha_hex.data()+2,sha_hex.size()-2);
+	std::filesystem::path objectPath = Git::MAIN_DIR / "objects" / subDirName / fileData;
+
+	std::filesystem::create_directories(objectPath.parent_path());
+
+	std::ofstream outStream(objectPath,std::ios::binary);
+	if(!outStream) return 1;
+	outStream.write(reinterpret_cast<char *>(compress.data()),compressedSize);
+	if(!outStream) return 1;
+	return 0;
+}
+
+std::vector<uint8_t> wrap(const std::string &type, const std::vector<uint8_t> &content)
+{
+	std:: size_t size = content.size();
+	std::string header = type + " " + std::to_string(size);
 	size_t totalSize = header.size() + 1 + size;
 	std::vector<uint8_t> finalBuffer(totalSize);
-	std::memcpy(finalBuffer.data(),header.data(),header.size());
+	std::memcpy(finalBuffer.data(), header.data(), header.size());
 	finalBuffer[header.size()] = '\0';
-	std::memcpy(finalBuffer.data()+header.size()+1,buffer.data(),size);
-	return to_hex(sha1(finalBuffer));
+	std::memcpy(finalBuffer.data() + header.size() + 1, content.data(), size);
+	return finalBuffer;
+}
+
+std::vector<uint8_t> read_bytes(const std::filesystem::path &filePath)
+{
+	std::ifstream fileInputStream(filePath, std::ios::binary | std::ios::ate);
+	if(!fileInputStream){
+		std::cerr<<"read_bytes: could open the file: "<<filePath<<"\n";
+		return {};
+	}
+	std::streamsize size = fileInputStream.tellg();
+	fileInputStream.seekg(0, std::ios::beg);
+	std::vector<uint8_t> buffer(size);
+
+	if (size > 0){
+		if (!fileInputStream.read(reinterpret_cast<char *>(buffer.data()), size)) return {};
+	}
+	return buffer;
+}
+
+std::string hash_object(const std::string &type, const std::filesystem::path &path)
+{
+	std::vector<uint8_t> content = read_bytes(path);
+	std::size_t size = content.size();
+	std::vector<uint8_t> wrappedContent = wrap(type, content);
+	return to_hex(sha1(wrappedContent));
 }
