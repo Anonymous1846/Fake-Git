@@ -9,6 +9,8 @@
 #include <zlib.h>
 #include <string>
 #include <string_view>
+#include<algorithm>
+
 
 bool create_init_directory(const std::filesystem::path &);
 bool write_contents(std::ofstream &, const std::string &);
@@ -17,6 +19,9 @@ int write_object(const std::string &sha_hex,const std::vector<uint8_t> &wrappedD
 int hash_object_write(const std::string& type, const std::filesystem::path& path);
 std::vector<uint8_t> read_bytes(const std::filesystem::path &);
 std::vector<uint8_t> wrap(const std::string &, const std::vector<uint8_t> &);
+std::vector<uint8_t> cat_file(const std::string& );
+std::vector<uint8_t> decompress(const std::vector<uint8_t>& );
+
 int init()
 {
 	if (!create_init_directory(Git::OBJECTS / "pack"))
@@ -69,13 +74,49 @@ int hash_object_write(const std::string& type,const std::filesystem::path& fileP
 	return 0;
 }
 
-std::string cat_file(std::string& hex_data){
+
+std::vector<uint8_t> decompress(const std::vector<uint8_t>& compressed){
+	z_stream ztr{};
+	ztr.zalloc = Z_NULL;
+	ztr.zfree = Z_NULL;
+	ztr.opaque = Z_NULL;
+	ztr.next_in = (Bytef *) compressed.data();
+	ztr.avail_in = compressed.size();
+	inflateInit(&ztr);
+	
+	std::vector<uint8_t> result;
+	uint8_t chunk[8192];
+	int ret;
+	do{
+		ztr.next_out = chunk;
+		ztr.avail_out = sizeof(chunk);
+		ret = inflate(&ztr,Z_NO_FLUSH);
+		size_t filled = sizeof(chunk) - ztr.avail_out;
+		result.insert(result.end(),chunk, chunk + filled);
+	}while(ret == Z_OK);
+	inflateEnd(&ztr);
+
+	if(ret != Z_STREAM_END) return {};
+	return result;
+}
+
+std::vector<uint8_t> cat_file(const std::string& hex_data){
 	std::string_view dirName(hex_data.data(),2);
 	std::string_view fileName(hex_data.data()+2,hex_data.size()-2);
 	std::filesystem::path fullFilePath = Git::OBJECTS / dirName / fileName;
-	if(fullFilePath.empty()) return NULL;
-	
+	if(fullFilePath.empty()) return {};
+
+	std::vector<uint8_t> bytes = read_bytes(fullFilePath);
+	std::vector<uint8_t> decompressedBytes = decompress(bytes);
+
+	auto sep = std::find(decompressedBytes.begin(),decompressedBytes.end(),'\0');
+	if(sep == decompressedBytes.end()) return {};
+	std::string header(decompressedBytes.begin(),sep);
+	std::vector contents(sep+1,decompressedBytes.end());
 }
+
+
+
 
 int write_object(const std::string& sha_hex,const std::vector<uint8_t> &wrappedData)
 {
