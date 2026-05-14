@@ -19,7 +19,7 @@ int write_object(const std::string &sha_hex,const std::vector<uint8_t> &wrappedD
 int hash_object_write(const std::string& type, const std::filesystem::path& path);
 std::vector<uint8_t> read_bytes(const std::filesystem::path &);
 std::vector<uint8_t> wrap(const std::string &, const std::vector<uint8_t> &);
-std::vector<uint8_t> cat_file(const std::string& );
+int cat_file(const std::string&,const std::string& );
 std::vector<uint8_t> decompress(const std::vector<uint8_t>& );
 
 int init()
@@ -100,19 +100,45 @@ std::vector<uint8_t> decompress(const std::vector<uint8_t>& compressed){
 	return result;
 }
 
-std::vector<uint8_t> cat_file(const std::string& hex_data){
+int cat_file(const std::string& flag,const std::string& hex_data){
 	std::string_view dirName(hex_data.data(),2);
 	std::string_view fileName(hex_data.data()+2,hex_data.size()-2);
 	std::filesystem::path fullFilePath = Git::OBJECTS / dirName / fileName;
-	if(fullFilePath.empty()) return {};
-
+	if(!std::filesystem::exists(fullFilePath)){
+		std::cerr << "fatal: not a valid object " << hex_data << "\n";
+		return 1;
+	}
 	std::vector<uint8_t> bytes = read_bytes(fullFilePath);
 	std::vector<uint8_t> decompressedBytes = decompress(bytes);
-
+	if(decompressedBytes.empty()){
+		std::cerr << "fatal: not a valid object " << hex_data << "\n";
+		return 1;
+	}
 	auto sep = std::find(decompressedBytes.begin(),decompressedBytes.end(),'\0');
-	if(sep == decompressedBytes.end()) return {};
+	if(sep == decompressedBytes.end()) return 1;
 	std::string header(decompressedBytes.begin(),sep);
-	std::vector contents(sep+1,decompressedBytes.end());
+	std::vector<uint8_t> contents(sep+1,decompressedBytes.end());
+	if(flag == "-p"){
+		std::for_each(contents.begin(),contents.end(),[](uint8_t value){
+				std::cout<< value; //cat-file -p
+			});
+		return 0;
+	}
+	else{
+		size_t size = header.find(' ');
+		std::string type = header.substr(0,size);
+		std::string dataSize = header.substr(size+1);
+
+		if(flag == "-t"){
+			std::cout<< type;
+			return 0;
+		}
+		else if(flag == "-s"){
+			std::cout << dataSize;
+			return 0;
+		}
+	}
+	return 1;
 }
 
 
