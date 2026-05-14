@@ -131,7 +131,13 @@ std::vector<TreeObject> readTree(const std::string &hex_data)
 std::string writeTree(const std::vector<TreeObject> &entries)
 {
 	std::vector<uint8_t> entry_bytes;
-	for (const TreeObject &treeObject : entries)
+	std::vector<TreeObject> sorted = entries;
+	std::sort(sorted.begin(),sorted.end(),[](
+		const TreeObject& treeObject1,const TreeObject& treeObject2
+	){
+		return treeObject1.filename < treeObject2.filename;
+	});
+	for (const TreeObject &treeObject : sorted)
 	{
 		for (char c : treeObject.mode)
 			entry_bytes.push_back(c);
@@ -146,6 +152,11 @@ std::string writeTree(const std::vector<TreeObject> &entries)
 		for (uint8_t b : treeObject.bytes)
 			entry_bytes.push_back(b);
 	}
+	std::vector<uint8_t> wrappedBytes = wrap("tree",entry_bytes);
+	std::string sha = to_hex(sha1(wrappedBytes));
+	if(write_object(sha,wrappedBytes)!=0) return "";
+	
+	return sha;
 }
 
 int write_object(const std::string &sha_hex, const std::vector<uint8_t> &wrappedData)
