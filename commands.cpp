@@ -19,6 +19,16 @@ struct TreeObject
 	std::array<uint8_t, 20> bytes;
 };
 
+namespace{
+	std::filesystem::path getObjectPathFromHex(std::string hex_data){
+		std::string_view dirName(hex_data.data(), 2);
+		std::string_view fileName(hex_data.data() + 2, hex_data.size() - 2);
+		std::filesystem::path fullFilePath = Git::OBJECTS / dirName / fileName;
+		return fullFilePath;
+	}
+	
+}
+
 int write_object(const std::string &sha_hex, const std::vector<uint8_t> &wrappedData);
 int hash_object_write(const std::string &type, const std::filesystem::path &path);
 int cat_file(const std::string &, const std::string &);
@@ -74,11 +84,9 @@ bool write_contents(std::ofstream &fileRef, const std::string &content)
 	return true;
 }
 
-int cat_file(const std::string &flag, const std::string &hex_data)
+int cat_file(const std::string &flag, const std::string& hex_data)
 {
-	std::string_view dirName(hex_data.data(), 2);
-	std::string_view fileName(hex_data.data() + 2, hex_data.size() - 2);
-	std::filesystem::path fullFilePath = Git::OBJECTS / dirName / fileName;
+	std::filesystem::path fullFilePath = getObjectPathFromHex(hex_data);
 	if (!std::filesystem::exists(fullFilePath))
 	{
 		std::cerr << "fatal: not a valid object " << hex_data << "\n";
@@ -126,6 +134,40 @@ int cat_file(const std::string &flag, const std::string &hex_data)
 
 std::vector<TreeObject> readTree(const std::string &hex_data)
 {
+	size_t size = 0;
+	std::filesystem::path fileFullPath = getObjectPathFromHex(hex_data);
+	std::vector<uint8_t> bytes = read_bytes(fileFullPath);
+	std::vector<uint8_t> decompressedBytes = decompress(bytes);
+	if (decompressedBytes.empty())
+	{
+		std::cerr << "fatal: not a valid object " << hex_data << "\n";
+		return {};
+	}
+
+	auto header_end = std::find(decompressedBytes.begin(),decompressedBytes.end(),'\0');
+	if(header_end == decompressedBytes.end()) return {};
+	size_t pos = (header_end - decompressedBytes.begin()) + 1;
+	std::vector<TreeObject> entries;
+	while(pos < decompressedBytes.size()){
+		size_t space = pos;
+		while(decompressedBytes[space]!=' ') space++;
+		std::string mode(decompressedBytes.begin()+pos,decompressedBytes.begin()+space);
+		pos = space + 1;
+		size_t nullPoint = pos;
+		while(decompressedBytes[nullPoint]!='\0') nullPoint++;
+		std::string filename(decompressedBytes.begin()+pos,decompressedBytes.begin()+nullPoint);
+		pos = nullPoint + 1;
+		std::array<uint8_t,20> sha_bytes;
+		std::copy(decompressedBytes.begin()+pos,decompressedBytes.begin()+pos+20,sha_bytes.begin());
+			
+		TreeObject treeObject;
+		treeObject.mode = mode;
+		treeObject.filename = filename;
+		treeObject.bytes = sha_bytes;
+		entries.push_back(treeObject);
+
+	}
+	return entries;
 }
 
 std::string writeTree(const std::vector<TreeObject> &entries)
