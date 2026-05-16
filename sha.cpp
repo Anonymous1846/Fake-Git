@@ -24,7 +24,7 @@ namespace
     {
         return b ^ c ^ d;
     }
-    void pad(std::vector<uint8_t> &data)
+    void pad(std::vector<uint8_t>& data)
     {
         uint64_t originalSize = data.size() * 8;
 
@@ -57,26 +57,26 @@ std::string to_hex(const std::array<uint8_t, 20> &hash)
     return std::string(buf, 40);
 }
 
-std::array<uint8_t, 20> sha1(const std::vector<uint8_t> &data)
+std::array<uint8_t, 20> sha1(std::vector<uint8_t>& data)
 {
-    std::vector<uint8_t> inputData = data;
+    
 
-    pad(inputData);
+    pad(data);
 
     uint32_t h0 = 0x67452301;
     uint32_t h1 = 0xEFCDAB89;
     uint32_t h2 = 0x98BADCFE;
     uint32_t h3 = 0x10325476;
     uint32_t h4 = 0xC3D2E1F0;
-    for (size_t initialStart = 0; initialStart < inputData.size(); initialStart += 64)
+    for (size_t initialStart = 0; initialStart < data.size(); initialStart += 64)
     {
         uint32_t finalWord[80];
         for (int i = 0; i < 16; i++)
         {
-            finalWord[i] = (inputData[initialStart + i * 4] << 24) |
-                           (inputData[initialStart + i * 4 + 1] << 16) |
-                           (inputData[initialStart + i * 4 + 2] << 8) |
-                           inputData[initialStart + i * 4 + 3];
+            finalWord[i] = (data[initialStart + i * 4] << 24) |
+                           (data[initialStart + i * 4 + 1] << 16) |
+                           (data[initialStart + i * 4 + 2] << 8) |
+                           data[initialStart + i * 4 + 3];
         }
 
         uint32_t a = h0;
