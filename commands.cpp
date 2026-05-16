@@ -20,7 +20,7 @@ struct TreeObject
 };
 
 namespace{
-	std::filesystem::path getObjectPathFromHex(std::string hex_data){
+	std::filesystem::path getObjectPathFromHex(const std::string& hex_data){
 		std::string_view dirName(hex_data.data(), 2);
 		std::string_view fileName(hex_data.data() + 2, hex_data.size() - 2);
 		std::filesystem::path fullFilePath = Git::OBJECTS / dirName / fileName;
@@ -134,7 +134,6 @@ int cat_file(const std::string &flag, const std::string& hex_data)
 
 std::vector<TreeObject> readTree(const std::string &hex_data)
 {
-	size_t size = 0;
 	std::filesystem::path fileFullPath = getObjectPathFromHex(hex_data);
 	std::vector<uint8_t> bytes = read_bytes(fileFullPath);
 	std::vector<uint8_t> decompressedBytes = decompress(bytes);
@@ -159,7 +158,7 @@ std::vector<TreeObject> readTree(const std::string &hex_data)
 		pos = nullPoint + 1;
 		std::array<uint8_t,20> sha_bytes;
 		std::copy(decompressedBytes.begin()+pos,decompressedBytes.begin()+pos+20,sha_bytes.begin());
-			
+		pos +=20;
 		TreeObject treeObject;
 		treeObject.mode = mode;
 		treeObject.filename = filename;
@@ -173,13 +172,12 @@ std::vector<TreeObject> readTree(const std::string &hex_data)
 std::string writeTree(const std::vector<TreeObject> &entries)
 {
 	std::vector<uint8_t> entry_bytes;
-	std::vector<TreeObject> sorted = entries;
-	std::sort(sorted.begin(),sorted.end(),[](
+	std::sort(entries.begin(),entries.end(),[](
 		const TreeObject& treeObject1,const TreeObject& treeObject2
 	){
 		return treeObject1.filename < treeObject2.filename;
 	});
-	for (const TreeObject &treeObject : sorted)
+	for (const TreeObject &treeObject : entries)
 	{
 		for (char c : treeObject.mode)
 			entry_bytes.push_back(c);
@@ -216,7 +214,7 @@ int write_object(const std::string &sha_hex, const std::vector<uint8_t> &wrapped
 		return 1;
 	std::string_view subDirName(sha_hex.data(), 2);
 	std::string_view fileData(sha_hex.data() + 2, sha_hex.size() - 2);
-	std::filesystem::path objectPath = Git::MAIN_DIR / "objects" / subDirName / fileData;
+	std::filesystem::path objectPath = Git::OBJECTS / subDirName / fileData;
 
 	std::filesystem::create_directories(objectPath.parent_path());
 
@@ -232,7 +230,6 @@ int write_object(const std::string &sha_hex, const std::vector<uint8_t> &wrapped
 std::string hash_object(const std::string &type, const std::filesystem::path &path)
 {
 	std::vector<uint8_t> content = read_bytes(path);
-	std::size_t size = content.size();
 	std::vector<uint8_t> wrappedContent = wrap(type, content);
 	return to_hex(sha1(wrappedContent));
 }
