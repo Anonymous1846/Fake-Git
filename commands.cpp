@@ -8,6 +8,7 @@
 #include <vector>
 #include <zlib.h>
 #include <string>
+#include<chrono>
 #include "constants.hpp"
 #include "commands.hpp"
 #include "objects.hpp"
@@ -37,6 +38,9 @@ namespace{
 	}
 	
 }
+
+
+auto timestamp = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch()).count();
 
 int write_object(const std::string &sha_hex, const std::vector<uint8_t> &wrappedData);
 int hash_object_write(const std::string &type, const std::filesystem::path &path);
@@ -197,6 +201,20 @@ int lsTree(const std::string& hex_data,bool name_only){
           << treeObject.filename << "\n";
     });
 	return 0;
+}
+
+std::string writeCommit(const std::string& treeSha,const std::optional<std::string>& parent,const std::string& message){
+	std::string commitString = "tree "+ treeSha+ "\n";
+	if(parent.has_value()) commitString += "parent "+parent.value()+"\n";
+	commitString +="author Daniel James <danieljames@gmail.com> "+std::to_string(timestamp) + "+0530\n";
+	commitString +="committer Daniel James <danieljames@gmail.com> "+std::to_string(timestamp) + "+0530\n\n";
+	commitString += message;
+	
+	std::vector<uint8_t> commitData(commitData.begin(),commitData.end());
+	std::vector<uint8_t>wrappedData = wrap("commit",commitData);
+	std::string sha = to_hex(sha1(wrappedData));
+	if(write_object(sha,wrappedData)!=0)return "";
+	return sha;
 }
 
 std::string writeTree(const std::vector<TreeObject> &entries)
