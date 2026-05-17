@@ -172,12 +172,13 @@ std::vector<TreeObject> readTree(const std::string &hex_data)
 std::string writeTree(const std::vector<TreeObject> &entries)
 {
 	std::vector<uint8_t> entry_bytes;
-	std::sort(entries.begin(),entries.end(),[](
+	std::vector<TreeObject> sorted = entries;
+	std::sort(sorted.begin(),sorted.end(),[](
 		const TreeObject& treeObject1,const TreeObject& treeObject2
 	){
 		return treeObject1.filename < treeObject2.filename;
 	});
-	for (const TreeObject &treeObject : entries)
+	for (const TreeObject &treeObject : sorted)
 	{
 		for (char c : treeObject.mode)
 			entry_bytes.push_back(c);
