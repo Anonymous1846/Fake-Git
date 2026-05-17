@@ -41,6 +41,8 @@ std::vector<uint8_t> decompress(const std::vector<uint8_t> &);
 std::vector<TreeObject> readTree(const std::string &);
 std::string writeTree(const std::vector<TreeObject> &);
 
+
+
 int init()
 {
 	if (!create_init_directory(Git::OBJECTS / "pack"))
@@ -167,6 +169,22 @@ std::vector<TreeObject> readTree(const std::string &hex_data)
 
 	}
 	return entries;
+}
+
+int lsTree(const std::string& hex_data,bool name_only){
+	std::vector<TreeObject> entries = readTree(hex_data);
+	if(entries.empty()) return 1;
+	if(name_only)std::for_each(entries.begin(), entries.end(), [](TreeObject &treeObject) {
+		std::cout<<treeObject.filename<<"\n"; 
+    });
+	else 
+		std::for_each(entries.begin(), entries.end(), [](TreeObject &treeObject) {
+		std::string type = ("40000"==treeObject.mode) || ("040000"==treeObject.mode) ? "tree" : "blob";
+		std::cout << treeObject.mode << " " << type << " " 
+          << to_hex(treeObject.bytes) << "\t" 
+          << treeObject.filename << "\n";
+    });
+	return 0;
 }
 
 std::string writeTree(const std::vector<TreeObject> &entries)
