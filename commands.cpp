@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <iostream>
+#include<optional>
 #include <fstream>
 #include <cstring>
 #include <vector>
@@ -17,6 +18,14 @@ struct TreeObject
 	std::string mode;
 	std::string filename;
 	std::array<uint8_t, 20> bytes;
+};
+
+struct CommitObject{
+	std::string tree;
+	std::optional<std::string> parent;
+	std::string author;
+	std::string commiter;
+	std::string commitMsg;
 };
 
 namespace{
@@ -151,13 +160,16 @@ std::vector<TreeObject> readTree(const std::string &hex_data)
 	std::vector<TreeObject> entries;
 	while(pos < decompressedBytes.size()){
 		size_t space = pos;
-		while(decompressedBytes[space]!=' ') space++;
+		while(space < decompressedBytes.size() && decompressedBytes[space]!=' ') space++;
+		if(space >= decompressedBytes.size()) return {};
 		std::string mode(decompressedBytes.begin()+pos,decompressedBytes.begin()+space);
 		pos = space + 1;
 		size_t nullPoint = pos;
-		while(decompressedBytes[nullPoint]!='\0') nullPoint++;
+		while(nullPoint < decompressedBytes.size() && decompressedBytes[nullPoint]!='\0') nullPoint++;
+		if(nullPoint >= decompressedBytes.size()) return {};
 		std::string filename(decompressedBytes.begin()+pos,decompressedBytes.begin()+nullPoint);
 		pos = nullPoint + 1;
+		if(pos + 20 > decompressedBytes.size()) return {};
 		std::array<uint8_t,20> sha_bytes;
 		std::copy(decompressedBytes.begin()+pos,decompressedBytes.begin()+pos+20,sha_bytes.begin());
 		pos +=20;
@@ -194,7 +206,11 @@ std::string writeTree(const std::vector<TreeObject> &entries)
 	std::sort(sorted.begin(),sorted.end(),[](
 		const TreeObject& treeObject1,const TreeObject& treeObject2
 	){
-		return treeObject1.filename < treeObject2.filename;
+		bool isDir1 = (treeObject1.mode == "40000" || treeObject1.mode == "040000");
+		bool isDir2 = (treeObject2.mode == "40000" || treeObject2.mode == "040000");
+		std::string name1 = treeObject1.filename + (isDir1 ? "/" : "");
+		std::string name2 = treeObject2.filename + (isDir2 ? "/" : "");
+		return name1 < name2;
 	});
 	for (const TreeObject &treeObject : sorted)
 	{
