@@ -39,9 +39,6 @@ namespace{
 	
 }
 
-
-auto timestamp = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch()).count();
-
 int write_object(const std::string &sha_hex, const std::vector<uint8_t> &wrappedData);
 int hash_object_write(const std::string &type, const std::filesystem::path &path);
 int cat_file(const std::string &, const std::string &);
@@ -204,17 +201,26 @@ int lsTree(const std::string& hex_data,bool name_only){
 }
 
 std::string writeCommit(const std::string& treeSha,const std::optional<std::string>& parent,const std::string& message){
+	int64_t timestamp = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch()).count();
 	std::string commitString = "tree "+ treeSha+ "\n";
 	if(parent.has_value()) commitString += "parent "+parent.value()+"\n";
 	commitString +="author Daniel James <danieljames@gmail.com> "+std::to_string(timestamp) + "+0530\n";
 	commitString +="committer Daniel James <danieljames@gmail.com> "+std::to_string(timestamp) + "+0530\n\n";
-	commitString += message;
+	commitString += message+"\n";
 	
-	std::vector<uint8_t> commitData(commitData.begin(),commitData.end());
+	std::vector<uint8_t> commitData(commitString.begin(),commitString.end());
 	std::vector<uint8_t>wrappedData = wrap("commit",commitData);
 	std::string sha = to_hex(sha1(wrappedData));
 	if(write_object(sha,wrappedData)!=0)return "";
 	return sha;
+}
+
+std::string readRef(std::string& reFname){
+	std::filesystem::path refPath = Git::REFS / reFname;
+	std::ifstream refStream(refPath);
+	if(!refStream) return "";
+	std::string content((std::istreambuf_iterator<char>(refStream)), std::istreambuf_iterator<char>());
+	return content;
 }
 
 std::string writeTree(const std::vector<TreeObject> &entries)
