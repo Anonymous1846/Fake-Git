@@ -51,7 +51,8 @@ std::vector<uint8_t> decompress(const std::vector<uint8_t> &);
 std::vector<TreeObject> readTree(const std::string &);
 std::string writeTree(const std::vector<TreeObject> &);
 std::string readRef(const std::string& );
-
+int updateRef(const std::filesystem::path&, const std::string& );
+int createBranch(const std::string& );
 
 int init()
 {
@@ -222,12 +223,44 @@ std::string readRef(const std::string& reFname){
 	std::string content((std::istreambuf_iterator<char>(refStream)), std::istreambuf_iterator<char>());
 	if(content.substr(0,5)=="ref: "){
 		std::string refPath = content.substr(5);
-		return readRef(reFname);
+		if (!content.empty() && content.back() == '\n') content.pop_back();
+		return readRef(refPath);
 	}
-	if (!content.empty() && content.back() == '\n') content.pop_back();
 
 	return content;
 }
+
+int updateRef(const std::string& ref, const std::string& sha_hex){
+	std::filesystem::path refPath = Git::MAIN_DIR / ref;
+	if(!std::filesystem::create_directories(refPath)) return 1;
+	std::ofstream outStream(refPath);
+	if(!outStream) return 1;
+	outStream << sha_hex;
+	outStream.close();
+	return 0;
+}
+
+std::string revParse(const std::string& refPath){
+	if(refPath=="HEAD") return readRef(refPath);
+	std::filesystem::path finalPath = Git::REFS / "heads" / refPath;
+	if(std::filesystem::exists(finalPath)) return readRef(finalPath);
+	return ""; 
+}
+
+int createBranch(const std::string& branchName){
+	std::filesystem::path newFeaturePath = Git::REFS / branchName;
+	std::filesystem::path HEAD = Git::MAIN_DIR / "HEAD";
+	std::ifstream refStream(HEAD);
+	std::string headContent((std::istreambuf_iterator<char>(refStream)), std::istreambuf_iterator<char>());
+	if(headContent.empty()) return 1;
+	if(std::filesystem::exists(newFeaturePath)) std::filesystem::create_directories(newFeaturePath);
+		if(!std::filesystem::exists(newFeaturePath)) return 1;
+		std::ofstream outputStream(newFeaturePath);
+		outputStream << headContent;
+		outputStream.close();
+	return 0;
+}
+
 
 std::string writeTree(const std::vector<TreeObject> &entries)
 {
