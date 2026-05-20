@@ -25,7 +25,7 @@ struct CommitObject{
 	std::string tree;
 	std::optional<std::string> parent;
 	std::string author;
-	std::string commiter;
+	std::string committer;
 	std::string commitMsg;
 };
 
@@ -205,8 +205,8 @@ std::string writeCommit(const std::string& treeSha,const std::optional<std::stri
 	int64_t timestamp = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch()).count();
 	std::string commitString = "tree "+ treeSha+ "\n";
 	if(parent.has_value()) commitString += "parent "+parent.value()+"\n";
-	commitString +="author Daniel James <danieljames@gmail.com> "+std::to_string(timestamp) + "+0530\n";
-	commitString +="committer Daniel James <danieljames@gmail.com> "+std::to_string(timestamp) + "+0530\n\n";
+	commitString +="author Daniel James <danieljames@gmail.com> "+std::to_string(timestamp) + " +0530\n";
+	commitString +="committer Daniel James <danieljames@gmail.com> "+std::to_string(timestamp) + " +0530\n\n";
 	commitString += message+"\n";
 	
 	std::vector<uint8_t> commitData(commitString.begin(),commitString.end());
