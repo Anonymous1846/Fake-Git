@@ -50,7 +50,7 @@ std::vector<uint8_t> read_bytes(const std::filesystem::path &);
 std::vector<uint8_t> decompress(const std::vector<uint8_t> &);
 std::vector<TreeObject> readTree(const std::string &);
 std::string writeTree(const std::vector<TreeObject> &);
-
+std::string readRef(const std::string& );
 
 
 int init()
@@ -215,11 +215,17 @@ std::string writeCommit(const std::string& treeSha,const std::optional<std::stri
 	return sha;
 }
 
-std::string readRef(std::string& reFname){
-	std::filesystem::path refPath = Git::REFS / reFname;
+std::string readRef(const std::string& reFname){
+	std::filesystem::path refPath = Git::MAIN_DIR / reFname;
 	std::ifstream refStream(refPath);
 	if(!refStream) return "";
 	std::string content((std::istreambuf_iterator<char>(refStream)), std::istreambuf_iterator<char>());
+	if(content.substr(0,5)=="ref: "){
+		std::string refPath = content.substr(5);
+		return readRef(reFname);
+	}
+	if (!content.empty() && content.back() == '\n') content.pop_back();
+
 	return content;
 }
 
